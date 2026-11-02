@@ -403,6 +403,20 @@ footer a { color: var(--dim); }
 .nav-brand .dot { border-radius: 2px; }
 .term-bar .led { border-radius: 2px; }
 .status-panel .ledsq { width: 10px; height: 10px; background: var(--white); flex: none; animation: pulse 2.4s ease-in-out infinite; }
+
+/* Terminal Snake: experiment on the free-domain mirror only. */
+.snake-panel[hidden]{display:none}
+.snake-panel{padding:1rem;border-top:1px solid var(--panel-edge);background:var(--bg)}
+.snake-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.7rem;font-size:.8rem;letter-spacing:.12em}
+.snake-board{display:block;width:min(100%,400px);height:auto;aspect-ratio:1;border:1px solid var(--panel-edge);margin:0 auto;touch-action:none;outline-offset:4px}
+.snake-status{font-size:.76rem;line-height:1.6;color:var(--dim);margin:.75rem 0;min-height:2.4em}
+.snake-actions{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center}
+.snake-actions .btn,.snake-pad .btn{min-height:44px;min-width:44px;touch-action:manipulation}
+.snake-pad{display:grid;grid-template-columns:repeat(3,48px);gap:5px;justify-content:center;margin:.8rem auto}
+.snake-pad [data-snake-dir="0,-1"]{grid-column:2}
+.snake-pad [data-snake-dir="-1,0"]{grid-column:1}
+.snake-help{font-size:.72rem;color:var(--dim);text-align:center;line-height:1.7;margin:.6rem 0}
+
 </style>
 </head>
 <body>
@@ -572,6 +586,15 @@ footer a { color: var(--dim); }
     <div class="terminal reveal">
       <div class="term-bar"><span class="led g"></span><span class="led y"></span><span class="led b"></span><span style="margin-left:0.6rem">guest@n4deem.site - hud-shell</span></div>
       <div class="term-body" id="termBody"></div>
+
+      <div id="snakePanel" class="snake-panel" hidden>
+        <div class="snake-head"><strong>SNAKE // EXPERIMENT</strong><span>SCORE <b id="snakeScore">0</b></span></div>
+        <canvas id="snakeCanvas" class="snake-board" width="400" height="400" tabindex="0" aria-label="Snake game board. Arrow keys or W A S D to steer. Enter to start, Space to pause, Escape to exit."></canvas>
+        <p class="snake-help">Arrows / WASD or swipe the board. Touch controls below.<br/>Space: pause. Escape: exit.</p>
+        <p id="snakeStatus" class="snake-status" role="status" aria-live="polite">Ready. Press Start or Enter.</p>
+        <div class="snake-actions"><button id="snakeStart" class="btn solid" type="button">Start</button><button id="snakePause" class="btn" type="button" disabled>Pause</button><button id="snakeClose" class="btn" type="button">Exit game</button></div>
+        <div class="snake-pad" aria-label="Snake direction controls"><button class="btn" type="button" data-snake-dir="0,-1" aria-label="Move up">&#8593;</button><button class="btn" type="button" data-snake-dir="-1,0" aria-label="Move left">&#8592;</button><button class="btn" type="button" data-snake-dir="0,1" aria-label="Move down">&#8595;</button><button class="btn" type="button" data-snake-dir="1,0" aria-label="Move right">&#8594;</button></div>
+      </div>
       <div class="term-input">
         <span class="prompt">guest@n4deem:~$</span>
         <input id="termInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Terminal input" placeholder="type 'help' and hit enter" />
@@ -749,7 +772,7 @@ footer a { color: var(--dim); }
   }
   function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   var CMDS = {
-    help: "Available commands:\n  about        who is Nadeem\n  experience   work history\n  projects     selected builds\n  skills       tech arsenal\n  contact      open a channel\n  resume       download the resume\n  github       open GitHub profile\n  linkedin     open LinkedIn\n  jarvis       ...\n  clear        wipe the screen",
+    help: "Available commands:\n  about        who is Nadeem\n  experience   work history\n  projects     selected builds\n  skills       tech arsenal\n  contact      open a channel\n  resume       download the resume\n  github       open GitHub profile\n  linkedin     open LinkedIn\n  jarvis       ...\n  snake        play Snake (experiment)\n  clear        wipe the screen",
     about: "Nadeem - software engineer based in Bengaluru, India.\nBuilds production web interfaces, Android apps and AI-assisted workflows.\nSoftware engineering at SmiRox Ventures LLP. Robotics on weekends, as a hobby.",
     experience: "SmiRox Ventures LLP\n  Software engineering (full-time)   Apr 2026 - Present\n  Intern                             Mar 2026 - Apr 2026\n  > FamEase product UIs across ~8 domains/subdomains (HTML/CSS/JS)\n  > smirox.com company site UI | ships via company CI/CD\n\nOnly Apple Tech - freelance\n  Dec 2025 - Jan 2026\n  > Company website, live at https://onlyappletech.in",
     projects: "Dreamlock ............ Android wellbeing app | Kotlin + Jetpack Compose (in dev)\nOnly Apple Tech ...... live client site | https://onlyappletech.in\nLegal AI RAG ......... legal-doc chatbot | LangChain + Pinecone\nInsightFlow .......... chat with CSVs | LangChain + GPT-4o-mini\n\ntype 'github' for the full repo list",
@@ -765,6 +788,7 @@ footer a { color: var(--dim); }
     if (!cmdline) return;
     history.unshift(cmdline); hIdx = -1;
     var cmd = cmdline.toLowerCase().split(/\s+/)[0];
+    if (cmd === "snake") { window.openTerminalSnake(); return; }
     if (cmd === "clear") { body.innerHTML = ""; return; }
     if (cmd === "resume") { print("Opening resume/Nadeem_resume.pdf ..."); window.open("resume/Nadeem_resume.pdf", "_blank"); return; }
     if (cmd === "github") { print("Opening github.com/nadeem9986 ..."); window.open("https://github.com/nadeem9986", "_blank"); return; }
@@ -994,6 +1018,46 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(function () {});
   });
 }
+</script>
+<script>
+/* Mirror-only terminal Snake. One canvas, one animation frame loop, no dependencies. */
+(function () {
+  var panel = document.getElementById('snakePanel'), canvas = document.getElementById('snakeCanvas');
+  var ctx = canvas.getContext('2d'), status = document.getElementById('snakeStatus');
+  var scoreEl = document.getElementById('snakeScore'), startBtn = document.getElementById('snakeStart');
+  var pauseBtn = document.getElementById('snakePause'), closeBtn = document.getElementById('snakeClose');
+  var snake, food, dir, next, score, active=false, paused=false, last=0, elapsed=0, frame=0, queued=false;
+  var N=20, cell=20, terminal=document.querySelector('.terminal'), terminalInput=document.getElementById('termInput');
+  function colors(){var c=getComputedStyle(document.documentElement);return {bg:c.getPropertyValue('--bg').trim(),ink:c.getPropertyValue('--ink').trim(),dim:c.getPropertyValue('--dim').trim(),line:c.getPropertyValue('--panel-edge').trim()};}
+  function draw(){
+    var c=colors();ctx.fillStyle=c.bg;ctx.fillRect(0,0,400,400);ctx.strokeStyle=c.line;ctx.lineWidth=0.5;
+    for(var i=0;i<=N;i++){ctx.beginPath();ctx.moveTo(i*cell,0);ctx.lineTo(i*cell,400);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*cell);ctx.lineTo(400,i*cell);ctx.stroke();}
+    if(!snake)return;
+    snake.forEach(function(p,i){ctx.fillStyle=i===0?c.ink:c.dim;ctx.fillRect(p.x*cell+2,p.y*cell+2,cell-4,cell-4);});
+    if(food){ctx.strokeStyle=c.ink;ctx.lineWidth=2;ctx.strokeRect(food.x*cell+5,food.y*cell+5,cell-10,cell-10);}
+  }
+  function placeFood(){var free=[];for(var y=0;y<N;y++)for(var x=0;x<N;x++)if(!snake.some(function(p){return p.x===x&&p.y===y;}))free.push({x:x,y:y});food=free.length?free[Math.floor(Math.random()*free.length)]:null;}
+  function stop(message){active=false;paused=false;cancelAnimationFrame(frame);frame=0;status.textContent=message;startBtn.textContent='Restart';pauseBtn.disabled=true;pauseBtn.textContent='Pause';draw();}
+  function step(){dir=next;queued=false;var head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};var eating=food&&head.x===food.x&&head.y===food.y;var collisionBody=eating?snake:snake.slice(0,-1);
+    if(head.x<0||head.x>=N||head.y<0||head.y>=N||collisionBody.some(function(p){return p.x===head.x&&p.y===head.y;})){stop('Game over. Score '+score+'. Press Restart or Enter.');return;}
+    snake.unshift(head);if(eating){score++;scoreEl.textContent=score;placeFood();if(!food){stop('Board complete. Score '+score+'.');return;}}else snake.pop();draw();
+  }
+  function loop(time){if(!active||paused)return;if(!last)last=time;elapsed+=Math.min(time-last,180);last=time;var speed=Math.max(75,145-score*3);if(elapsed>=speed){elapsed=0;step();}if(active&&!paused)frame=requestAnimationFrame(loop);}
+  function start(){cancelAnimationFrame(frame);snake=[{x:7,y:10},{x:6,y:10},{x:5,y:10}];dir={x:1,y:0};next=dir;score=0;scoreEl.textContent='0';active=true;paused=false;queued=false;last=0;elapsed=0;food={x:10,y:10};status.textContent='Running. Collect the hollow square. Avoid walls and yourself.';startBtn.textContent='Restart';pauseBtn.disabled=false;pauseBtn.textContent='Pause';draw();canvas.focus({preventScroll:true});frame=requestAnimationFrame(loop);}
+  function turn(x,y){if(!active||paused||queued||(x===-dir.x&&y===-dir.y))return;next={x:x,y:y};queued=true;}
+  function pause(){if(!active)return;paused=!paused;cancelAnimationFrame(frame);pauseBtn.textContent=paused?'Resume':'Pause';status.textContent=paused?'Paused. Press Resume or Space.':'Running. Collect the hollow square. Avoid walls and yourself.';last=0;if(!paused)frame=requestAnimationFrame(loop);}
+  window.openTerminalSnake=function(){panel.hidden=false;terminalInput.blur();if(!snake){snake=[{x:7,y:10},{x:6,y:10},{x:5,y:10}];food={x:12,y:10};score=0;draw();}canvas.focus({preventScroll:true});panel.scrollIntoView({behavior:'smooth',block:'center'});};
+  startBtn.addEventListener('click',start);pauseBtn.addEventListener('click',pause);closeBtn.addEventListener('click',function(){cancelAnimationFrame(frame);active=false;paused=false;panel.hidden=true;startBtn.textContent='Start';status.textContent='Ready. Press Start or Enter.';pauseBtn.disabled=true;terminalInput.focus({preventScroll:true});});
+  panel.addEventListener('click',function(e){e.stopPropagation();});
+  panel.addEventListener('keydown',function(e){var keys={ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1],ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0]};if(keys[e.key]){e.preventDefault();turn.apply(null,keys[e.key]);}else if(e.key===' '){e.preventDefault();pause();}else if(e.key==='Enter'&&e.target===canvas){e.preventDefault();start();}else if(e.key==='Escape'){e.preventDefault();closeBtn.click();}});
+  panel.querySelectorAll('[data-snake-dir]').forEach(function(btn){btn.addEventListener('click',function(){var v=btn.dataset.snakeDir.split(',').map(Number);turn(v[0],v[1]);canvas.focus({preventScroll:true});});});
+  var touchX=0,touchY=0;canvas.addEventListener('touchstart',function(e){var t=e.changedTouches[0];touchX=t.clientX;touchY=t.clientY;},{passive:true});
+  canvas.addEventListener('touchmove',function(e){e.preventDefault();},{passive:false});
+  canvas.addEventListener('touchend',function(e){var t=e.changedTouches[0],dx=t.clientX-touchX,dy=t.clientY-touchY;if(Math.max(Math.abs(dx),Math.abs(dy))<12)return;if(Math.abs(dx)>Math.abs(dy))turn(dx>0?1:-1,0);else turn(0,dy>0?1:-1);},{passive:true});
+  document.addEventListener('visibilitychange',function(){if(document.hidden&&active&&!paused)pause();});
+  new MutationObserver(function(){if(!panel.hidden)draw();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+
 </script>
 </body>
 </html>
