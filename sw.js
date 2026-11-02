@@ -1,6 +1,6 @@
 /* n4deem.site service worker: precache everything on first load, serve cache-first.
    Bump CACHE_VERSION on every deploy so old caches are invalidated cleanly. */
-var CACHE_VERSION = 'n4deem-mirror-snake-2026-11-02-v1';
+var CACHE_VERSION = 'n4deem-mirror-snake-2026-11-02-v2';
 var ASSETS = [
   '/',
   '/index.html',
@@ -11,7 +11,7 @@ var ASSETS = [
 self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then(function (cache) { return cache.addAll(ASSETS); })
+      .then(function (cache) { return cache.addAll(ASSETS.map(function (url) { return new Request(url, { cache: "reload" }); })); })
       .then(function () { return self.skipWaiting(); })
   );
 });
