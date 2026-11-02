@@ -1,6 +1,6 @@
-/* n4deem.site service worker: precache everything on first load, serve cache-first.
+/* Mirror service worker: fresh HTML online, cached assets and offline fallback.
    Bump CACHE_VERSION on every deploy so old caches are invalidated cleanly. */
-var CACHE_VERSION = 'n4deem-mirror-snake-2026-11-02-v2';
+var CACHE_VERSION = 'n4deem-mirror-snake-2026-11-02-v3';
 var ASSETS = [
   '/',
   '/index.html',
@@ -32,6 +32,25 @@ self.addEventListener('fetch', function (event) {
   var request = event.request;
   if (request.method !== 'GET') return;
   if (new URL(request.url).origin !== self.location.origin) return;
+  // Never pin a visitor to an old terminal after a deployment.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(new Request(request, { cache: 'no-cache' })).then(function (response) {
+        if (response && response.ok && response.type === 'basic') {
+          var copy = response.clone();
+          event.waitUntil(caches.open(CACHE_VERSION).then(function (cache) {
+            return cache.put(request, copy);
+          }));
+        }
+        return response;
+      }).catch(function () {
+        return caches.match(request, { ignoreSearch: true }).then(function (cached) {
+          return cached || caches.match('/index.html');
+        });
+      })
+    );
+    return;
+  }
   event.respondWith(
     caches.match(request, { ignoreSearch: true }).then(function (cached) {
       if (cached) return cached;
