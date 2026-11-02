@@ -1,6 +1,6 @@
 /* n4deem.site service worker: precache everything on first load, serve cache-first.
    Bump CACHE_VERSION on every deploy so old caches are invalidated cleanly. */
-var CACHE_VERSION = 'n4deem-2026-10-30-v6';
+var CACHE_VERSION = 'n4deem-mirror-snake-2026-11-02-v1';
 var ASSETS = [
   '/',
   '/index.html',
