@@ -169,27 +169,36 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
 .nav-brand { display: flex; align-items: center; gap: 0.65rem; color: var(--ink); letter-spacing: 0.18em; font-size: 0.95rem; }
 .nav-brand .brand-logo { width: 22px; height: 22px; flex: none; display: block; transform: rotate(var(--logo-rotation, 0deg)); transform-origin: center; }
 [data-theme="light"] .nav-brand .brand-logo { filter: invert(1); }
-/* Liquid-glass navbar: translucent, strong blur + saturation, specular edge. Flip rules further down still force it opaque during the theme sweep. */
+/* Liquid-glass navbar: clear glass capsule. Light blur, edge refraction (SVG displacement, Chromium), saturated backdrop, curved specular rim. Flip rules below still force it opaque during the theme sweep. */
 .nav {
-  --glass-tint: rgba(16, 16, 16, 0.5);
-  --glass-hi: rgba(255, 255, 255, 0.22);
-  --glass-lo: rgba(255, 255, 255, 0.05);
-  --glass-shadow: rgba(0, 0, 0, 0.35);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05) 100%), var(--glass-tint);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
-  border-bottom: 1px solid var(--glass-hi);
-  box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 var(--glass-lo), 0 10px 30px -12px var(--glass-shadow);
+  --glass-tint: rgba(12, 12, 12, 0.26);
+  top: 10px; left: clamp(8px, 2vw, 24px); right: clamp(8px, 2vw, 24px);
+  border-radius: 22px;
+  background: var(--glass-tint);
+  border: 0;
+  -webkit-backdrop-filter: blur(3px) saturate(170%) brightness(1.08);
+  backdrop-filter: blur(3px) saturate(170%) brightness(1.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -10px 18px -10px rgba(255, 255, 255, 0.28),
+    inset 0 0 22px rgba(255, 255, 255, 0.07),
+    0 14px 34px -10px rgba(0, 0, 0, 0.5);
+}
+@supports (backdrop-filter: url(#liquidGlass)) {
+  .nav { -webkit-backdrop-filter: url(#liquidGlass) blur(2px) saturate(170%) brightness(1.08); backdrop-filter: url(#liquidGlass) blur(2px) saturate(170%) brightness(1.08); }
 }
 [data-theme="light"] .nav {
-  --glass-tint: rgba(246, 246, 246, 0.55);
-  --glass-hi: rgba(255, 255, 255, 0.9);
-  --glass-lo: rgba(0, 0, 0, 0.06);
-  --glass-shadow: rgba(0, 0, 0, 0.22);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.12) 60%, rgba(255, 255, 255, 0.3) 100%), var(--glass-tint);
-  border-bottom-color: rgba(0, 0, 0, 0.1);
+  --glass-tint: rgba(255, 255, 255, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -10px 18px -10px rgba(255, 255, 255, 0.8),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.04),
+    0 12px 30px -10px rgba(0, 0, 0, 0.28);
 }
-.nav::after { content: ""; position: absolute; left: 6%; right: 6%; bottom: -1px; height: 1px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--glass-hi), transparent); opacity: 0.8; }
+.nav::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(115deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, 0.14) 100%); }
+.nav > * { position: relative; }
 .nav-brand .dot {
   width: 11px; height: 11px; border-radius: 50%;
   border: 2px solid var(--white);
@@ -460,6 +469,7 @@ footer a { color: var(--dim); }
 <div class="scanlines"></div>
 <div class="vignette"></div>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="liquidGlass" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='60' viewBox='0 0 600 60' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='l' x1='0' x2='1' y1='0' y2='0'%3E%3Cstop offset='0' stop-color='rgb%28255,128,128%29'/%3E%3Cstop offset='1' stop-color='rgb%28255,128,128%29' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='r' x1='1' x2='0' y1='0' y2='0'%3E%3Cstop offset='0' stop-color='rgb%280,128,128%29'/%3E%3Cstop offset='1' stop-color='rgb%280,128,128%29' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='t' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='rgb%28128,255,128%29'/%3E%3Cstop offset='1' stop-color='rgb%28128,255,128%29' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' x2='0' y1='1' y2='0'%3E%3Cstop offset='0' stop-color='rgb%28128,0,128%29'/%3E%3Cstop offset='1' stop-color='rgb%28128,0,128%29' stop-opacity='0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='600' height='60' fill='rgb%28128,128,128%29'/%3E%3Crect width='36' height='60' fill='url%28%23l%29'/%3E%3Crect x='564' width='36' height='60' fill='url%28%23r%29'/%3E%3Crect width='600' height='26' fill='url%28%23t%29'/%3E%3Crect y='34' width='600' height='26' fill='url%28%23b%29'/%3E%3C/svg%3E" preserveAspectRatio="none" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" scale="34" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
 <header class="nav">
   <a class="nav-brand" href="#top"><img class="brand-logo" src="assets/logo.svg" alt="" width="22" height="22" />Nadeem</a>
   <nav class="nav-links" aria-label="Primary">
