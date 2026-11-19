@@ -200,20 +200,22 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
 /* Navbar tap and text highlight: neutral grey instead of the browser's default blue. Keyboard focus stays visible. */
 .nav a, .nav button { -webkit-tap-highlight-color: rgba(128, 128, 128, 0.35); }
 .nav-links a { -webkit-tap-highlight-color: transparent; position: relative; isolation: isolate; }
-/* Tapped nav word: a small clear glass bubble behind it (curved rim, soft highlight), fading out after release. */
-.nav-links a::after {
-  content: ""; position: absolute; inset: -4px -9px; z-index: -1; border-radius: 999px; pointer-events: none; opacity: 0;
-  transition: opacity 0.45s ease, transform 0.45s ease; transform: scale(0.92);
-  background: radial-gradient(ellipse at 30% 22%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.14) 38%, rgba(255, 255, 255, 0.04) 70%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), inset 0 5px 7px -2px rgba(255, 255, 255, 0.55), inset 0 -5px 8px -3px rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.25);
-  -webkit-backdrop-filter: blur(1px) saturate(160%); backdrop-filter: blur(1px) saturate(160%);
+/* Tapped nav word: a clear glass bubble (curved rim and specular arc, no fill) with a ripple spreading from the tap point. */
+.nav-links a .bb {
+  position: absolute; inset: -4px -9px; z-index: -1; border-radius: 999px; overflow: hidden; pointer-events: none; opacity: 0;
+  transition: opacity 0.45s ease; background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), inset 0 3px 3px -2px rgba(255, 255, 255, 0.7), inset 0 -3px 3px -2px rgba(255, 255, 255, 0.25);
 }
-[data-theme="light"] .nav-links a::after {
-  background: radial-gradient(ellipse at 30% 22%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 40%, rgba(0, 0, 0, 0.04) 100%);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14), inset 0 5px 7px -2px rgba(255, 255, 255, 1), inset 0 -5px 8px -3px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.12);
+.nav-links a .bb.on { opacity: 1; transition-duration: 0s; }
+.nav-links a .bb i {
+  position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transform: scale(0); opacity: 0.9; animation: bbRipple 0.7s ease-out forwards;
 }
-.nav-links a:active::after { opacity: 1; transform: scale(1); transition-duration: 0s; }
-@media (prefers-reduced-motion: reduce) { .nav-links a::after { transition: none; transform: none; } }
+@keyframes bbRipple { to { transform: scale(9); opacity: 0; } }
+[data-theme="light"] .nav-links a .bb { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 3px 3px -2px rgba(255, 255, 255, 1), inset 0 -3px 3px -2px rgba(0, 0, 0, 0.16); }
+[data-theme="light"] .nav-links a .bb i { border-color: rgba(0, 0, 0, 0.4); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5); }
+@media (prefers-reduced-motion: reduce) { .nav-links a .bb { transition: none; } .nav-links a .bb i { animation: none; opacity: 0; } }
 .nav ::selection, .nav::selection { background: rgba(128, 128, 128, 0.35); color: inherit; }
 .nav-links a:focus-visible, .nav button:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
 .nav-brand .dot {
@@ -1258,5 +1260,22 @@ if ('serviceWorker' in navigator) {
 })();
 </script>
 
+<script>
+/* Glass bubble with a ripple behind a pressed nav word. */
+(function () {
+  var links = document.querySelectorAll('.nav-links a');
+  Array.prototype.forEach.call(links, function (a) {
+    var bb = document.createElement('span'); bb.className = 'bb'; bb.setAttribute('aria-hidden', 'true'); a.appendChild(bb);
+    var timer = null;
+    a.addEventListener('pointerdown', function (e) {
+      var r = bb.getBoundingClientRect(), i = document.createElement('i');
+      i.style.left = (e.clientX - r.left) + 'px'; i.style.top = (e.clientY - r.top) + 'px';
+      bb.appendChild(i); bb.classList.add('on');
+      setTimeout(function () { if (i.parentNode) i.parentNode.removeChild(i); }, 800);
+      clearTimeout(timer); timer = setTimeout(function () { bb.classList.remove('on'); }, 450);
+    }, { passive: true });
+  });
+})();
+</script>
 </body>
 </html>
