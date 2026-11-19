@@ -1314,14 +1314,16 @@ if ('serviceWorker' in navigator) {
     raf = 0;
     if (target === null || paused()) { if (target !== null) raf = requestAnimationFrame(step); return; }
     var d = target - strip.scrollLeft;
-    if (reduce || Math.abs(d) < 0.5) { strip.scrollLeft = target; return; }
-    strip.scrollLeft += d * 0.18;
+    if (reduce || Math.abs(d) < 160) { strip.scrollLeft = target; return; }
+    strip.scrollLeft += d * 0.3;
     raf = requestAnimationFrame(step);
   }
   function onScroll() {
     if (strip.scrollWidth <= strip.clientWidth + 2) return;
     var t = compute(); if (t === null) return;
-    target = t; if (!raf) raf = requestAnimationFrame(step);
+    target = t;
+    if (!paused() && (reduce || Math.abs(t - strip.scrollLeft) < 160)) { strip.scrollLeft = t; return; }
+    if (!raf) raf = requestAnimationFrame(step);
   }
   window.addEventListener('scroll', onScroll, { passive: true });
 })();
