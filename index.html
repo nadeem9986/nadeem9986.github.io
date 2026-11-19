@@ -1074,11 +1074,14 @@ if ('serviceWorker' in navigator) {
   btn.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:71;font:inherit;font-size:11px;letter-spacing:.08em;padding:7px 10px;background:var(--nav-bg);color:var(--ink);border:1px solid var(--panel-edge);cursor:pointer;';
   function label() { btn.textContent = on ? 'SOUND: ON' : 'SOUND: OFF'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.setAttribute('aria-label', on ? 'Mute sound effects' : 'Unmute sound effects'); }
   label(); document.body.appendChild(btn);
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  function unlock() { if (ensure()) { var b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); } }
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (n) { document.addEventListener(n, function () { if (on) unlock(); }, { once: true, capture: true }); });
   function ensure() {
     if (!ctx) {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return false;
-      ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+      ctx = new AC(); master = ctx.createGain(); master.gain.value = 1; var lim = ctx.createDynamicsCompressor(); lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.05; master.connect(lim); lim.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') ctx.resume();
     return true;
@@ -1091,12 +1094,12 @@ if ('serviceWorker' in navigator) {
     o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
   }
   var S = {
-    hover: function () { tone(1800, 1500, 0.035, 0.025, 'sine'); },
-    click: function () { tone(900, 500, 0.06, 0.12, 'triangle'); },
-    solid: function () { tone(520, 520, 0.08, 0.1, 'triangle'); tone(780, 780, 0.12, 0.1, 'triangle', 0.07); },
-    nav: function () { tone(400, 800, 0.1, 0.08, 'sine'); },
-    theme: function () { tone(300, 900, 0.18, 0.1, 'sawtooth'); tone(900, 300, 0.18, 0.06, 'sine', 0.12); },
-    off: function () { tone(500, 250, 0.1, 0.1, 'triangle'); }
+    hover: function () { tone(1200, 1000, 0.04, 0.1, 'sine'); },
+    click: function () { tone(900, 500, 0.07, 0.5, 'triangle'); },
+    solid: function () { tone(520, 520, 0.09, 0.45, 'triangle'); tone(780, 780, 0.14, 0.45, 'triangle', 0.08); },
+    nav: function () { tone(400, 800, 0.12, 0.45, 'sine'); },
+    theme: function () { tone(300, 900, 0.2, 0.3, 'sawtooth'); tone(900, 300, 0.2, 0.3, 'sine', 0.14); },
+    off: function () { tone(500, 250, 0.12, 0.45, 'triangle'); }
   };
   function play(name) { if (on && ensure()) S[name](); }
   btn.addEventListener('click', function () {
