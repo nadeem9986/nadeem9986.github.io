@@ -250,6 +250,8 @@ h2 .slash { color: var(--faint); }
 /* ---------- hero ---------- */
 .hero { min-height: 100vh; display: grid; grid-template-columns: 1fr; gap: 2.5rem; align-items: center; padding-top: 7rem; }
 @media (min-width: 920px) { .hero { grid-template-columns: 1.15fr 0.85fr; } }
+/* Phones: start the intro right under the navbar instead of centering it in a full-screen block. */
+@media (max-width: 600px) { .hero { min-height: auto; align-items: start; padding-top: 6rem; padding-bottom: 3rem; } }
 .hero-copy .kicker { color: var(--faint); font-size: 0.78rem; letter-spacing: 0.4em; text-transform: uppercase; margin-bottom: 1rem; }
 .hero-copy h1 {
   font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 1.05; letter-spacing: 0.06em; color: var(--white);
