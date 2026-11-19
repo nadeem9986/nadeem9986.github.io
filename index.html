@@ -197,6 +197,10 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
 .nav::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: none; }
 [data-theme="light"] .nav::before { background: linear-gradient(115deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, 0.14) 100%); }
 .nav > * { position: relative; }
+/* Navbar tap and text highlight: neutral grey instead of the browser's default blue. Keyboard focus stays visible. */
+.nav a, .nav button { -webkit-tap-highlight-color: rgba(128, 128, 128, 0.35); }
+.nav ::selection, .nav::selection { background: rgba(128, 128, 128, 0.35); color: inherit; }
+.nav-links a:focus-visible, .nav button:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
 .nav-brand .dot {
   width: 11px; height: 11px; border-radius: 50%;
   border: 2px solid var(--white);
