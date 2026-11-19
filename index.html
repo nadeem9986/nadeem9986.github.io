@@ -1143,28 +1143,53 @@ if ('serviceWorker' in navigator) {
     try { t.out.gain.cancelScheduledValues(n); t.out.gain.setValueAtTime(t.out.gain.value, n); t.out.gain.linearRampToValueAtTime(0.0001, n + (fast ? 0.04 : 0.08)); } catch (e) {}
     t.nodes.forEach(function (o) { try { o.stop(n + 0.12); } catch (e) {} });
   }
+  var noiseBuf = null;
+  function noise() {
+    if (!noiseBuf) { noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.12), ctx.sampleRate); var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    return noiseBuf;
+  }
   function startCyber(toLight) {
     if (!on || !ensure()) return;
     flipSeen = true; stopCyber(true);
     var wide = window.innerWidth >= 1024, D = wide ? 0.62 : 0.84, n = ctx.currentTime + 0.02, nodes = [];
-    var out = ctx.createGain(); out.gain.setValueAtTime(1, n); out.connect(master);
-    function osc(type, f0, f1, vol, a, b, gateHz) {
-      var o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-      o.type = type; o.frequency.setValueAtTime(f0, n + a); o.frequency.exponentialRampToValueAtTime(f1, n + b);
-      f.type = 'lowpass'; f.Q.value = 6; f.frequency.setValueAtTime(toLight ? 300 : 3000, n + a); f.frequency.exponentialRampToValueAtTime(toLight ? 3000 : 300, n + b);
-      g.gain.setValueAtTime(0.0001, n + a); g.gain.linearRampToValueAtTime(vol, n + a + 0.05); g.gain.setValueAtTime(vol, n + b - 0.08); g.gain.linearRampToValueAtTime(0.0001, n + b);
-      o.connect(f); f.connect(g); g.connect(out); o.start(n + a); o.stop(n + b + 0.05); nodes.push(o);
-      if (gateHz) { var l = ctx.createOscillator(), lg = ctx.createGain(); l.type = 'square'; l.frequency.value = gateHz; lg.gain.value = vol * 0.9; l.connect(lg); lg.connect(g.gain); l.start(n + a); l.stop(n + b + 0.05); nodes.push(l); }
+    var out = ctx.createGain(); out.gain.setValueAtTime(0.7, n); out.connect(master);
+    function env(g, at, vol, att, dec) { g.gain.setValueAtTime(0.0001, n + at); g.gain.linearRampToValueAtTime(vol, n + at + att); g.gain.exponentialRampToValueAtTime(0.0001, n + at + att + dec); }
+    /* metallic click: band-passed noise burst */
+    function click(at, f, vol, dec) {
+      var s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      s.buffer = noise(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 5; env(g, at, vol, 0.002, dec || 0.035);
+      s.connect(bp); bp.connect(g); g.connect(out); s.start(n + at); s.stop(n + at + (dec || 0.035) + 0.05); nodes.push(s);
     }
-    var lo = toLight ? 110 : 880, hi = toLight ? 880 : 110;
-    osc('sawtooth', lo, hi, 0.28, 0, D);
-    osc('square', lo * 2, hi * 2, 0.12, 0.04, D - 0.04, 26);
-    for (var i = 0; i < 7; i++) { var at = (i + 0.5) / 7 * (D - 0.1), fr = [1318, 1760, 2349, 1568, 2093, 1976, 2637][i]; osc('sine', fr, fr * 0.8, 0.14, at, at + 0.05); }
-    var th = ctx.createOscillator(), tg = ctx.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(140, n + D - 0.12); th.frequency.exponentialRampToValueAtTime(45, n + D + 0.2);
-    tg.gain.setValueAtTime(0.0001, n + D - 0.12); tg.gain.linearRampToValueAtTime(0.5, n + D - 0.1); tg.gain.exponentialRampToValueAtTime(0.0001, n + D + 0.2);
-    th.connect(tg); tg.connect(out); th.start(n + D - 0.12); th.stop(n + D + 0.25); nodes.push(th);
+    /* metal clank: inharmonic partials with a fast decay */
+    function clank(at, base, vol, dec) {
+      [1, 2.76, 5.4, 8.93].forEach(function (r, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = base * r;
+        env(g, at, vol / (i + 1), 0.003, dec / (1 + i * 0.4)); o.connect(g); g.connect(out); o.start(n + at); o.stop(n + at + dec + 0.05); nodes.push(o);
+      });
+    }
+    /* servo whirr: rising filtered saw with vibrato, plus a quieter gear layer */
+    function servo(type, f0, f1, vol, a, b, fc0, fc1) {
+      var o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(), l = ctx.createOscillator(), lg = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, n + a); o.frequency.exponentialRampToValueAtTime(f1, n + b);
+      l.frequency.value = 17; lg.gain.value = f0 * 0.05; l.connect(lg); lg.connect(o.frequency);
+      f.type = 'lowpass'; f.Q.value = 4; f.frequency.setValueAtTime(fc0, n + a); f.frequency.exponentialRampToValueAtTime(fc1, n + b);
+      g.gain.setValueAtTime(0.0001, n + a); g.gain.linearRampToValueAtTime(vol, n + a + 0.08); g.gain.setValueAtTime(vol, n + b - 0.1); g.gain.linearRampToValueAtTime(0.0001, n + b);
+      o.connect(f); f.connect(g); g.connect(out); o.start(n + a); l.start(n + a); o.stop(n + b + 0.05); l.stop(n + b + 0.05); nodes.push(o, l);
+    }
+    servo('sawtooth', 70, 420, 0.22, 0, D - 0.1, 250, 2200);
+    servo('square', 140, 640, 0.07, 0.1, D - 0.1, 400, 1800);
+    /* accelerating ratchet of plate clicks */
+    var t = 0.03, gap = 0.085, k = 0;
+    while (t < D - 0.15) { click(t, 1800 + (k % 4) * 900, 0.55, 0.03); t += gap; gap = Math.max(0.035, gap * 0.9); k++; }
+    /* heavier plate shifts */
+    [0.1, 0.27, 0.43].forEach(function (p, i) { var at = p * D / 0.62; click(at, 700 + i * 250, 0.7, 0.07); clank(at, 380 + i * 90, 0.18, 0.18); });
+    /* lock into place: thud, big clank, noise snap */
+    var lk = D - 0.08;
+    var th = ctx.createOscillator(), tg = ctx.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(150, n + lk); th.frequency.exponentialRampToValueAtTime(42, n + lk + 0.25);
+    env(tg, lk, 0.8, 0.004, 0.28); th.connect(tg); tg.connect(out); th.start(n + lk); th.stop(n + lk + 0.35); nodes.push(th);
+    clank(lk, 310, 0.35, 0.32); click(lk, 3200, 0.8, 0.06); click(lk + 0.05, 1200, 0.5, 0.05);
     T = { out: out, nodes: nodes };
-    setTimeout(function () { if (T && T.out === out) T = null; }, (D + 0.4) * 1000);
+    setTimeout(function () { if (T && T.out === out) T = null; }, (D + 0.5) * 1000);
   }
   var htmlEl = document.documentElement;
   new MutationObserver(function () {
