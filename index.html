@@ -11,7 +11,7 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://n4deem.site" />
 <link rel="preload" href="assets/webfonts/DepartureMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a0a0a'/%3E%3Crect x='10' y='10' width='44' height='44' fill='none' stroke='%23ffffff' stroke-width='4'/%3E%3Crect x='26' y='26' width='12' height='12' fill='%23ffffff'/%3E%3C/svg%3E" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
 <script>
 (function () {
   var m = null;
@@ -167,6 +167,8 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
   backdrop-filter: blur(10px);
 }
 .nav-brand { display: flex; align-items: center; gap: 0.65rem; color: var(--ink); letter-spacing: 0.18em; font-size: 0.95rem; }
+.nav-brand .brand-logo { width: 22px; height: 22px; flex: none; display: block; transform: rotate(var(--logo-rotation, 0deg)); transform-origin: center; }
+[data-theme="light"] .nav-brand .brand-logo { filter: invert(1); }
 .nav-brand .dot {
   width: 11px; height: 11px; border-radius: 50%;
   border: 2px solid var(--white);
@@ -342,6 +344,7 @@ footer a { color: var(--dim); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }
+  .nav-brand .brand-logo { transform: none; }
   .reveal { opacity: 1; transform: none; }
 }
 
@@ -437,7 +440,7 @@ footer a { color: var(--dim); }
 <div class="vignette"></div>
 
 <header class="nav">
-  <a class="nav-brand" href="#top"><span class="dot"></span>NADEEM</a>
+  <a class="nav-brand" href="#top"><img class="brand-logo" src="assets/logo.svg" alt="" width="22" height="22" />Nadeem</a>
   <nav class="nav-links" aria-label="Primary">
     <span class="nav-status">SYS.ONLINE</span>
     <a href="#experience">Experience</a>
@@ -1061,6 +1064,35 @@ if ('serviceWorker' in navigator) {
 </script>
 <script data-goatcounter="https://n4deem-dev.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <script>
+/* Scroll-linked gear motion: one turn per 3000px, no idle animation. */
+(function () {
+  'use strict';
+  var logo = document.querySelector('.nav-brand .brand-logo');
+  if (!logo || !window.matchMedia) return;
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var frame = 0;
+  function paintLogo() {
+    frame = 0;
+    var angle = reducedMotion.matches ? 0 : Math.max(0, window.scrollY) * 0.12;
+    logo.style.setProperty('--logo-rotation', angle + 'deg');
+  }
+  function queueLogo() {
+    if (reducedMotion.matches || frame) return;
+    frame = window.requestAnimationFrame(paintLogo);
+  }
+  function motionChanged() {
+    if (frame) window.cancelAnimationFrame(frame);
+    frame = 0;
+    paintLogo();
+  }
+  window.addEventListener('scroll', queueLogo, { passive: true });
+  window.addEventListener('pageshow', motionChanged);
+  if (reducedMotion.addEventListener) reducedMotion.addEventListener('change', motionChanged);
+  else reducedMotion.addListener(motionChanged);
+  paintLogo();
+})();
+</script>
+<script>
 /* UI sound effects: synthesized with Web Audio (no audio files). Starts only after a user gesture; mute persists. */
 (function () {
   var KEY = 'n4deem-sfx';
@@ -1101,16 +1133,60 @@ if ('serviceWorker' in navigator) {
     theme: function () { tone(300, 900, 0.2, 0.3, 'sawtooth'); tone(900, 300, 0.2, 0.3, 'sine', 0.14); },
     off: function () { tone(500, 250, 0.12, 0.45, 'triangle'); }
   };
+
+  /* Cyber transformation sound for the dark/light tile flip. Plays while <html> has .theme-flipping
+     (set by the flip code, removed when it ends), so its length follows the real animation. */
+  var T = null;
+  function stopCyber(fast) {
+    if (!T) return;
+    var t = T; T = null; var n = ctx.currentTime;
+    try { t.out.gain.cancelScheduledValues(n); t.out.gain.setValueAtTime(t.out.gain.value, n); t.out.gain.linearRampToValueAtTime(0.0001, n + (fast ? 0.04 : 0.08)); } catch (e) {}
+    t.nodes.forEach(function (o) { try { o.stop(n + 0.12); } catch (e) {} });
+  }
+  function startCyber(toLight) {
+    if (!on || !ensure()) return;
+    flipSeen = true; stopCyber(true);
+    var wide = window.innerWidth >= 1024, D = wide ? 0.62 : 0.84, n = ctx.currentTime + 0.02, nodes = [];
+    var out = ctx.createGain(); out.gain.setValueAtTime(1, n); out.connect(master);
+    function osc(type, f0, f1, vol, a, b, gateHz) {
+      var o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+      o.type = type; o.frequency.setValueAtTime(f0, n + a); o.frequency.exponentialRampToValueAtTime(f1, n + b);
+      f.type = 'lowpass'; f.Q.value = 6; f.frequency.setValueAtTime(toLight ? 300 : 3000, n + a); f.frequency.exponentialRampToValueAtTime(toLight ? 3000 : 300, n + b);
+      g.gain.setValueAtTime(0.0001, n + a); g.gain.linearRampToValueAtTime(vol, n + a + 0.05); g.gain.setValueAtTime(vol, n + b - 0.08); g.gain.linearRampToValueAtTime(0.0001, n + b);
+      o.connect(f); f.connect(g); g.connect(out); o.start(n + a); o.stop(n + b + 0.05); nodes.push(o);
+      if (gateHz) { var l = ctx.createOscillator(), lg = ctx.createGain(); l.type = 'square'; l.frequency.value = gateHz; lg.gain.value = vol * 0.9; l.connect(lg); lg.connect(g.gain); l.start(n + a); l.stop(n + b + 0.05); nodes.push(l); }
+    }
+    var lo = toLight ? 110 : 880, hi = toLight ? 880 : 110;
+    osc('sawtooth', lo, hi, 0.28, 0, D);
+    osc('square', lo * 2, hi * 2, 0.12, 0.04, D - 0.04, 26);
+    for (var i = 0; i < 7; i++) { var at = (i + 0.5) / 7 * (D - 0.1), fr = [1318, 1760, 2349, 1568, 2093, 1976, 2637][i]; osc('sine', fr, fr * 0.8, 0.14, at, at + 0.05); }
+    var th = ctx.createOscillator(), tg = ctx.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(140, n + D - 0.12); th.frequency.exponentialRampToValueAtTime(45, n + D + 0.2);
+    tg.gain.setValueAtTime(0.0001, n + D - 0.12); tg.gain.linearRampToValueAtTime(0.5, n + D - 0.1); tg.gain.exponentialRampToValueAtTime(0.0001, n + D + 0.2);
+    th.connect(tg); tg.connect(out); th.start(n + D - 0.12); th.stop(n + D + 0.25); nodes.push(th);
+    T = { out: out, nodes: nodes };
+    setTimeout(function () { if (T && T.out === out) T = null; }, (D + 0.4) * 1000);
+  }
+  var htmlEl = document.documentElement;
+  new MutationObserver(function () {
+    if (htmlEl.classList.contains('theme-flipping')) { startCyber(htmlEl.getAttribute('data-theme') === 'light'); }
+    else stopCyber(false);
+  }).observe(htmlEl, { attributes: true, attributeFilter: ['class'] });
+  var flipSeen = false;
+  function themeClick() {
+    flipSeen = false;
+    setTimeout(function () { if (!flipSeen) play('theme'); }, 250);
+  }
   function play(name) { if (on && ensure()) S[name](); }
   btn.addEventListener('click', function () {
     on = !on; try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) {}
+    if (!on && ctx) stopCyber(true);
     label(); if (on) { if (ensure()) S.solid(); } else if (ctx) { ensure(); S.off(); }
   });
   document.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('#sfxToggle')) return;
     var el = e.target.closest && e.target.closest('a,button');
     if (!el) return;
-    if (el.id === 'themeToggle') play('theme');
+    if (el.id === 'themeToggle') { themeClick(); return; }
     else if (el.classList.contains('solid')) play('solid');
     else if (el.closest('nav') || el.classList.contains('nav-brand')) play('nav');
     else play('click');
