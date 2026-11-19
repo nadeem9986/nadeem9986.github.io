@@ -1278,27 +1278,52 @@ if ('serviceWorker' in navigator) {
 })();
 </script>
 <script>
-/* Scroll-aware navbar: slide the nav strip so the current section's word stays in view. Pauses after the user touches the strip. */
+/* Scroll-aware navbar: the nav strip glides continuously with page scroll so the current section's word stays centred. Real horizontal drags on the strip pause it; plain taps do not. */
 (function () {
   var strip = document.querySelector('.nav-links'); if (!strip) return;
-  var map = [].slice.call(strip.querySelectorAll('a[href^="#"]')).map(function (a) {
+  var items = [].slice.call(strip.querySelectorAll('a[href^="#"]')).map(function (a) {
     var id = a.getAttribute('href').slice(1); return { a: a, el: id ? document.getElementById(id) : null };
   }).filter(function (m) { return m.el; });
+  if (!items.length) return;
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var hold = 0, cur = null, ticking = false;
-  ['pointerdown', 'touchstart', 'wheel'].forEach(function (n) { strip.addEventListener(n, function () { hold = Date.now() + 3000; }, { passive: true }); });
-  function update() {
-    ticking = false;
-    if (strip.scrollWidth <= strip.clientWidth + 2) return;
-    var y = window.innerHeight * 0.35, best = null;
-    map.forEach(function (m) { if (m.el.getBoundingClientRect().top <= y) best = m; });
-    if (best === cur) return;
-    cur = best; if (!best || Date.now() < hold) return;
-    var sr = strip.getBoundingClientRect(), ar = best.a.getBoundingClientRect();
-    var left = strip.scrollLeft + (ar.left - sr.left) - (strip.clientWidth - ar.width) / 2;
-    strip.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' });
+  var dragging = false, holdUntil = 0, sx = 0, sy = 0, raf = 0, target = null;
+  function centre(a) {
+    var sr = strip.getBoundingClientRect(), ar = a.getBoundingClientRect();
+    return strip.scrollLeft + (ar.left - sr.left) - (strip.clientWidth - ar.width) / 2;
   }
-  window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  function paused() { return dragging || Date.now() < holdUntil; }
+  strip.addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  strip.addEventListener('touchmove', function (e) {
+    var t = e.touches[0];
+    if (!dragging && Math.abs(t.clientX - sx) > 8 && Math.abs(t.clientX - sx) > Math.abs(t.clientY - sy)) dragging = true;
+    if (dragging) holdUntil = Date.now() + 1200;
+  }, { passive: true });
+  function endDrag() { if (dragging) { dragging = false; holdUntil = Date.now() + 1200; } }
+  strip.addEventListener('touchend', endDrag, { passive: true });
+  strip.addEventListener('touchcancel', endDrag, { passive: true });
+  strip.addEventListener('wheel', function (e) { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) holdUntil = Date.now() + 1200; }, { passive: true });
+  function compute() {
+    var y = window.scrollY + window.innerHeight * 0.35, tops = items.map(function (m) { return m.el.getBoundingClientRect().top + window.scrollY; });
+    if (y < tops[0]) return null;
+    var i = 0; while (i + 1 < items.length && y >= tops[i + 1]) i++;
+    var c = centre(items[i].a);
+    if (i + 1 < items.length) { var t = (y - tops[i]) / Math.max(1, tops[i + 1] - tops[i]); c += (centre(items[i + 1].a) - c) * t; }
+    return Math.max(0, Math.min(strip.scrollWidth - strip.clientWidth, c));
+  }
+  function step() {
+    raf = 0;
+    if (target === null || paused()) { if (target !== null) raf = requestAnimationFrame(step); return; }
+    var d = target - strip.scrollLeft;
+    if (reduce || Math.abs(d) < 0.5) { strip.scrollLeft = target; return; }
+    strip.scrollLeft += d * 0.18;
+    raf = requestAnimationFrame(step);
+  }
+  function onScroll() {
+    if (strip.scrollWidth <= strip.clientWidth + 2) return;
+    var t = compute(); if (t === null) return;
+    target = t; if (!raf) raf = requestAnimationFrame(step);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
 })();
 </script>
 </body>
