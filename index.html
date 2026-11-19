@@ -695,11 +695,8 @@ footer a { color: var(--dim); }
     nav.addEventListener("wheel", cancelHint, { passive: true });
     nav.addEventListener("keydown", cancelHint);
     nav.scrollTo({ left: to, behavior: "smooth" });
-    setTimeout(function () {
-      if (cancelled) return;
-      nav.scrollTo({ left: from, behavior: "smooth" });
-      setTimeout(cleanup, 800);
-    }, 800);
+    /* stay at the end so the theme and sound toggles stay visible; the user can still swipe back */
+    setTimeout(cleanup, 1500);
   }
 
   /* boot sequence */
