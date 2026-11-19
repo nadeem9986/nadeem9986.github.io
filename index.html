@@ -169,27 +169,22 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
 .nav-brand { display: flex; align-items: center; gap: 0.65rem; color: var(--ink); letter-spacing: 0.18em; font-size: 0.95rem; }
 .nav-brand .brand-logo { width: 22px; height: 22px; flex: none; display: block; transform: rotate(var(--logo-rotation, 0deg)); transform-origin: center; }
 [data-theme="light"] .nav-brand .brand-logo { filter: invert(1); }
-/* Liquid-glass navbar: clear glass capsule. Light blur, edge refraction (SVG displacement, Chromium), saturated backdrop, curved specular rim. Flip rules below still force it opaque during the theme sweep. */
+/* Liquid-glass navbar: full-width clear glass strip. Light backdrop blur, edge refraction (SVG displacement, Chromium), thin specular rim. Dark stays clear (no white haze). Flip rules below still force it opaque during the theme sweep. */
 .nav {
-  --glass-tint: rgba(12, 12, 12, 0.26);
-  top: 10px; left: clamp(8px, 2vw, 24px); right: clamp(8px, 2vw, 24px);
-  border-radius: 22px;
+  --glass-tint: rgba(0, 0, 0, 0.16);
+  top: 0; left: 0; right: 0; border-radius: 0; border: 0;
   background: var(--glass-tint);
-  border: 0;
-  -webkit-backdrop-filter: blur(3px) saturate(170%) brightness(1.08);
-  backdrop-filter: blur(3px) saturate(170%) brightness(1.08);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.55),
-    inset 0 -10px 18px -10px rgba(255, 255, 255, 0.28),
-    inset 0 0 22px rgba(255, 255, 255, 0.07),
-    0 14px 34px -10px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(3px) saturate(150%);
+  backdrop-filter: blur(3px) saturate(150%);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 28px -14px rgba(0, 0, 0, 0.6);
 }
 @supports (backdrop-filter: url(#liquidGlass)) {
-  .nav { -webkit-backdrop-filter: url(#liquidGlass) blur(2px) saturate(170%) brightness(1.08); backdrop-filter: url(#liquidGlass) blur(2px) saturate(170%) brightness(1.08); }
+  .nav { -webkit-backdrop-filter: url(#liquidGlass) blur(1px) saturate(150%); backdrop-filter: url(#liquidGlass) blur(1px) saturate(150%); }
 }
 [data-theme="light"] .nav {
   --glass-tint: rgba(255, 255, 255, 0.34);
+  -webkit-backdrop-filter: blur(3px) saturate(170%) brightness(1.08);
+  backdrop-filter: blur(3px) saturate(170%) brightness(1.08);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.7),
     inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
@@ -197,7 +192,11 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
     inset 0 0 0 2px rgba(0, 0, 0, 0.04),
     0 12px 30px -10px rgba(0, 0, 0, 0.28);
 }
-.nav::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(115deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, 0.14) 100%); }
+@supports (backdrop-filter: url(#liquidGlass)) {
+  [data-theme="light"] .nav { -webkit-backdrop-filter: url(#liquidGlass) blur(2px) saturate(170%) brightness(1.08); backdrop-filter: url(#liquidGlass) blur(2px) saturate(170%) brightness(1.08); }
+}
+.nav::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: none; }
+[data-theme="light"] .nav::before { background: linear-gradient(115deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 72%, rgba(255, 255, 255, 0.14) 100%); }
 .nav > * { position: relative; }
 .nav-brand .dot {
   width: 11px; height: 11px; border-radius: 50%;
