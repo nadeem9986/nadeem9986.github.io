@@ -1218,7 +1218,7 @@ if ('serviceWorker' in navigator) {
     var wide = window.innerWidth >= 1024, D = wide ? 0.62 : 0.84, out = ctx.createGain(), list = [];
     out.gain.value = 1; out.connect(master);
     var kk = makeKit(ctx, out, list);
-    if (THEME_SOUND === 'ticks') { for (var x = 0.01; x < D; x += 0.08) kk.hit(ctx.currentTime + 0.02 + x); } else { kk.transform(ctx.currentTime + 0.02, D); }
+    if (THEME_SOUND === 'ticks') { for (var i = 0; i < 5; i++) kk.hit(ctx.currentTime + 0.02 + i * D / 5); /* exactly five tiks per switch */ } else { kk.transform(ctx.currentTime + 0.02, D); }
     T = { out: out, list: list };
     setTimeout(function () { if (T && T.out === out) T = null; }, (D + 0.5) * 1000);
   }
