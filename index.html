@@ -204,17 +204,17 @@ a:hover { color: var(--white); text-decoration: underline; text-underline-offset
 .nav-links a .bb {
   position: absolute; inset: -4px -9px; z-index: -1; border-radius: 999px; overflow: hidden; pointer-events: none; opacity: 0;
   transition: opacity 0.45s ease; background: transparent;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), inset 0 3px 3px -2px rgba(255, 255, 255, 0.7), inset 0 -3px 3px -2px rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.5), inset 0 1.5px 1px -1px rgba(255, 255, 255, 0.55), inset 0 -1.5px 1px -1px rgba(255, 255, 255, 0.2);
 }
 .nav-links a .bb.on { opacity: 1; transition-duration: 0s; }
 .nav-links a .bb i {
   position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none;
-  border: 1.5px solid rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   transform: scale(0); opacity: 0.9; animation: bbRipple 0.7s ease-out forwards;
 }
 @keyframes bbRipple { to { transform: scale(9); opacity: 0; } }
-[data-theme="light"] .nav-links a .bb { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 3px 3px -2px rgba(255, 255, 255, 1), inset 0 -3px 3px -2px rgba(0, 0, 0, 0.16); }
-[data-theme="light"] .nav-links a .bb i { border-color: rgba(0, 0, 0, 0.4); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5); }
+[data-theme="light"] .nav-links a .bb { box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.28), inset 0 1.5px 1px -1px rgba(255, 255, 255, 1), inset 0 -1.5px 1px -1px rgba(0, 0, 0, 0.14); }
+[data-theme="light"] .nav-links a .bb i { border-color: rgba(0, 0, 0, 0.4); }
 @media (prefers-reduced-motion: reduce) { .nav-links a .bb { transition: none; } .nav-links a .bb i { animation: none; opacity: 0; } }
 .nav ::selection, .nav::selection { background: rgba(128, 128, 128, 0.35); color: inherit; }
 .nav-links a:focus-visible, .nav button:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
@@ -1275,6 +1275,30 @@ if ('serviceWorker' in navigator) {
       clearTimeout(timer); timer = setTimeout(function () { bb.classList.remove('on'); }, 450);
     }, { passive: true });
   });
+})();
+</script>
+<script>
+/* Scroll-aware navbar: slide the nav strip so the current section's word stays in view. Pauses after the user touches the strip. */
+(function () {
+  var strip = document.querySelector('.nav-links'); if (!strip) return;
+  var map = [].slice.call(strip.querySelectorAll('a[href^="#"]')).map(function (a) {
+    var id = a.getAttribute('href').slice(1); return { a: a, el: id ? document.getElementById(id) : null };
+  }).filter(function (m) { return m.el; });
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hold = 0, cur = null, ticking = false;
+  ['pointerdown', 'touchstart', 'wheel'].forEach(function (n) { strip.addEventListener(n, function () { hold = Date.now() + 3000; }, { passive: true }); });
+  function update() {
+    ticking = false;
+    if (strip.scrollWidth <= strip.clientWidth + 2) return;
+    var y = window.innerHeight * 0.35, best = null;
+    map.forEach(function (m) { if (m.el.getBoundingClientRect().top <= y) best = m; });
+    if (best === cur) return;
+    cur = best; if (!best || Date.now() < hold) return;
+    var sr = strip.getBoundingClientRect(), ar = best.a.getBoundingClientRect();
+    var left = strip.scrollLeft + (ar.left - sr.left) - (strip.clientWidth - ar.width) / 2;
+    strip.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' });
+  }
+  window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
 })();
 </script>
 </body>
