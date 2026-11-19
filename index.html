@@ -1135,9 +1135,11 @@ if ('serviceWorker' in navigator) {
   var htmlEl = document.documentElement;
   var btn = document.createElement('button');
   btn.type = 'button'; btn.id = 'sfxToggle';
-  btn.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:71;font:inherit;font-size:11px;letter-spacing:.08em;padding:7px 10px;background:var(--nav-bg);color:var(--ink);border:1px solid var(--panel-edge);cursor:pointer;';
+  var themeBtn = document.getElementById('themeToggle');
+  if (themeBtn && themeBtn.parentNode) { btn.className = 'btn theme-btn'; btn.style.whiteSpace = 'nowrap'; }
+  else btn.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:71;font:inherit;font-size:11px;letter-spacing:.08em;padding:7px 10px;background:var(--nav-bg);color:var(--ink);border:1px solid var(--panel-edge);cursor:pointer;';
   function label() { btn.textContent = on ? 'SOUND: ON' : 'SOUND: OFF'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); btn.setAttribute('aria-label', on ? 'Mute sound effects' : 'Unmute sound effects'); }
-  label(); document.body.appendChild(btn);
+  label(); if (themeBtn && themeBtn.parentNode) themeBtn.parentNode.insertBefore(btn, themeBtn); else document.body.appendChild(btn);
   /* Mechanical sound kit: ratchet ticks, metal impacts, servo whine, hydraulic hiss, plate scrapes. Pure synthesis. */
   function makeKit(c, dst, list) {
     var nb = null;
